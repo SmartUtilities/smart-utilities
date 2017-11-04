@@ -14,9 +14,27 @@ var port = config.get('port');
 var logFileName = config.get('logFileName');
 
 
-// server.js
+// DATABASE
+// =============================================================================
 
-// BASE SETUP
+var mysql      = require('mysql');
+var connection = mysql.createConnection({
+  host     : '10.0.0.160',
+  user     : 'root',
+  password : 'w0rldp4y!',
+  database : 'smart_utilities'
+});
+
+/* connection.connect();
+
+connection.query('SELECT 1 + 1 AS solution', function (error, results, fields) {
+  if (error) throw error;
+  console.log('The solution is: ', results[0].solution);
+});
+
+connection.end(); */
+
+// API/Platform
 // =============================================================================
 
 // call the packages we need
@@ -34,27 +52,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// this will serve static files
-/* var options = {
-  dotfiles: 'ignore',
-  etag: false,
-  extensions: ['htm', 'html'],
-  index: false,
-  maxAge: '1d',
-  redirect: false,
-  setHeaders: function (res, path, stat) {
-    res.set('x-timestamp', Date.now())
-  }
-} */
-
-
 var port = 3000;        // set our port
 
 // ROUTES FOR OUR API
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
 
-// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
 router.get('/search', function(req, res) {
     res.json({ message: 'hooray! welcome to our api!' });
 });
@@ -66,28 +69,41 @@ router.route('/search').post(function(req, res) {
   // console.log (req.body.devices);
   var devices = req.body.devices;
   if (req.body.devices.length != 0) {
-    wpwithin.createClient(host, port, true, logFileName, function (err, response) {
 
-        console.log("createClient.callback");
-        console.log("createClient.callback.err: " + err);
-        console.log("createClient.callback.response: %j", response);
+    var transactionID = Math.floor(Date.now() / 1000);
 
-        console.log ("================ Create Client Devices: ==========================", devices);
+    var query = "INSERT INTO CONSUMERS (tid, consumer, duration) VALUES ";
+    for (var i=0; i < req.body.devices.length; i++) {
+        query += "("+ transactionID +", " + "'" +req.body.devices[i].name + "'" + ", " + req.body.devices[i].duration +")"
+        query += (i <  req.body.devices.length - 1) ? ", " : "";
+    }
+
+    console.log (query);
+
+    connection.connect();
+
+    connection.query(query, function (error, results, fields) {
+      if (error) throw error;
+
+      // Create Client
+      wpwithin.createClient(host, port, true, logFileName, function (err, response) {
+
+          console.log("createClient.callback");
+          console.log("createClient.callback.err: " + err);
+          console.log("createClient.callback.response: %j", response);
 
 
-        if (err == null) {
+          if (err == null) {
 
-            client = response;
+              client = response;
 
-            setup(devices);
-        }
+              setup();
+          }
+      });
     });
 
-
-
+    connection.end();
   }
-
-
   res.json({"message" : "OK"});
 });
 
@@ -104,13 +120,10 @@ app.use('/api', router);
 app.listen(port);
 console.log('Magic happens on port ' + port);
 
-
-
 // Methods
 // =============================================================================
 
-
-function setup(devices) {
+function setup() {
 
     client.setup("Smart Utilities", "Smart Utilities Consumer Device", function (err, response) {
 
@@ -130,12 +143,12 @@ function setup(devices) {
                 device = response;
             }
         });
-        console.log ("================ Setup Devices: ==========================", devices);
-        discoverDevices(devices);
+        //console.log ("================ Setup Devices: ==========================", devices);
+        discoverDevices();
     });
 }
 
-function discoverDevices(devices) {
+function discoverDevices() {
     /* client.searchForDevice(10000, "Smart Utilities", function (err, response) {
 
       console.log ("Callback reponse: ", response);
@@ -156,7 +169,7 @@ function discoverDevices(devices) {
         console.log("deviceDiscovery.callback.err: %s", err);
         console.log("deviceDiscovery.callback.response: %j", response);
 
-        console.log ("================ Discover Devices: ==========================", devices);
+        //console.log ("================ Discover Devices: ==========================", devices);
 
         if (response != null && response.length > 0) {
 
@@ -165,18 +178,26 @@ function discoverDevices(devices) {
 
             for (var i = 0; i < response.length; i++) {
 
-                console.log("Description: %s", response[i].deviceDescription);
+
+                // console.log (response[i].serviceTypes[0]);
+
+                if (response[i].serviceTypes.join(', ').indexOf("smart-utilities-energy") != 0) {
+                  //   console.log (response[i].serviceTypes);
+
+                  connectToDevice(response[i]);
+                }
+                /* console.log("Description: %s", response[i].deviceDescription);
                 console.log("Hostname: %s", response[i].hostname);
                 console.log("Port: %d", response[i].portNumber);
                 console.log("Server ID: %s", response[i].serverId);
                 console.log("URL Prefix: %s", response[i].urlPrefix);
                 console.log("Service types: %s", response[i].serviceTypes.join(', '));
 
-                console.log("-------");
+                console.log("-------"); */
             }
 
             // Connect to the first device
-            var serviceMessage = response[0];
+            //var serviceMessage = response[0];
 
             // connectToDevice(serviceMessage);
 
@@ -189,6 +210,9 @@ function discoverDevices(devices) {
 }
 
 function connectToDevice(serviceMessage) {
+
+    //console.log ("================ Connect to Devices: ==========================", devices);
+
     'use strict';
 
     var hceCard = new types.HCECard();
@@ -229,6 +253,9 @@ function connectToDevice(serviceMessage) {
 function getAvailableServices() {
 
     client.requestServices(function (err, response) {
+
+
+
 
         console.log("requestServices.callback.err: %s", err);
         console.log("requestServices.callback.response: %j", response);
