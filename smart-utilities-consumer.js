@@ -181,9 +181,10 @@ function discoverDevices() {
 
                 // console.log (response[i].serviceTypes[0]);
 
-                if (response[i].serviceTypes.join(', ').indexOf("smart-utilities-energy") != 0) {
-                  //   console.log (response[i].serviceTypes);
-
+                if (response[i].serviceTypes.join(', ').indexOf("smart-utilities-energy") >= 0) {
+                  /* console.log (response[i].serviceTypes.join(', '));
+                  console.log (response[i].serviceTypes.join(', ').indexOf("smart-utilities-energy")); */
+                  console.log ("============================= SMART UTILITIES ENERGY ==============================");
                   connectToDevice(response[i]);
                 }
                 /* console.log("Description: %s", response[i].deviceDescription);

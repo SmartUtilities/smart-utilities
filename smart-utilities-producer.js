@@ -40,26 +40,35 @@ function setup() {
     });
 }
 
+
 function addService() {
 
     var service = new types.Service();
 
     service.id = 1;
-    service.name = "RoboWash";
-    service.description = "Car washed by robot";
-    service.serviceType = "wash";
-
-    var rwPrice = new types.Price();
-    rwPrice.id = 1;
-    rwPrice.description = "Car wash";
-    rwPrice.unitId = 1;
-    rwPrice.unitDescription = "Single wash";
-    var pricePerUnit = new types.PricePerUnit();
-    pricePerUnit.amount = 650;
-    pricePerUnit.currencyCode = "GBP";
-    rwPrice.pricePerUnit = pricePerUnit;
+    service.name = "Energy";
+    service.description = "Energy Price / Time Slots";
+    service.serviceType = "smart-utilities-energy";
     service.prices = new Array();
-    service.prices[0] = rwPrice;
+    // Creat Price
+    for (var i=0; i < 24; i++) {
+      var rwPrice = new types.Price();
+      rwPrice.id = i;
+      rwPrice.description = i + "-" + (i+1);
+      rwPrice.unitId = 1;
+      rwPrice.unitDescription = "kwh";
+      var pricePerUnit = new types.PricePerUnit();
+      var min = 10;
+      var max = 100;
+      var amount = parseInt(Math.random() * (max - min) + min);
+      pricePerUnit.amount = amount;
+      pricePerUnit.currencyCode = "GBP";
+      rwPrice.pricePerUnit = pricePerUnit;
+
+      // Add prices
+      service.prices.push(rwPrice);
+    }
+
 
     client.addService(service, function (err, response) {
 
