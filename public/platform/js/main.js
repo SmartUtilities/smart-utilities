@@ -35,7 +35,13 @@ $(document).ready(function () {
       });
     }); */
 
-    $.post( "http://localhost:3000/api/search/", selection)
+    // Get URL
+    var url = window.location.href;
+    var arr = url.split("/");
+    var hostname = arr[0] + "//" + arr[2];
+
+    // Search
+    $.post( hostname + "/api/search/", selection)
       .done(function( data ) {
         console.log( "Data Loaded: ", data );
       });

@@ -58,7 +58,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var port = 3000;        // set our port
+//var port = 3001;        // set our port
+var portExpress = process.env.PORT || 3000;
 
 // ROUTES FOR OUR API
 // =============================================================================
@@ -103,7 +104,7 @@ router.route('/search').post(function(req, res) {
           if (err == null) {
 
               client = response;
-
+              console.log ("Error is null!");
               setup();
           }
       });
@@ -124,14 +125,14 @@ app.use('/api', router);
 
 // START THE SERVER
 // =============================================================================
-app.listen(port);
-console.log('Magic happens on port ' + port);
+app.listen(portExpress);
+console.log('Magic happens on port ' + portExpress);
 
 // Methods
 // =============================================================================
 
 function setup() {
-
+    console.log ("Starting setup...");
     client.setup("Smart Utilities", "Smart Utilities Consumer Device", function (err, response) {
 
         console.log("setup.callback.err: " + err);
