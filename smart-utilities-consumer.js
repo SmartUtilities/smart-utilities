@@ -57,24 +57,37 @@ var router = express.Router();              // get an instance of the express Ro
 // test route to make sure everything is working (accessed at GET http://localhost:8080/api)
 router.get('/search', function(req, res) {
     res.json({ message: 'hooray! welcome to our api!' });
+});
+
+router.route('/search').post(function(req, res) {
+  //
+
+  // console.log (req.body.devices);
+  var devices = req.body.devices;
+  if (req.body.devices.length != 0) {
     wpwithin.createClient(host, port, true, logFileName, function (err, response) {
 
         console.log("createClient.callback");
         console.log("createClient.callback.err: " + err);
         console.log("createClient.callback.response: %j", response);
 
+        console.log ("================ Create Client Devices: ==========================", devices);
+
+
         if (err == null) {
 
             client = response;
 
-            setup();
+            setup(devices);
         }
     });
-});
 
-router.post ('/search', function (req, res) {
-  res.json({ message: 'hooray! welcome to our api!' }); 
 
+
+  }
+
+
+  res.json({"message" : "OK"});
 });
 
 // more routes for our API will happen here
@@ -96,7 +109,7 @@ console.log('Magic happens on port ' + port);
 // =============================================================================
 
 
-function setup() {
+function setup(devices) {
 
     client.setup("Smart Utilities", "Smart Utilities Consumer Device", function (err, response) {
 
@@ -116,28 +129,33 @@ function setup() {
                 device = response;
             }
         });
-
-        discoverDevices();
+        console.log ("================ Setup Devices: ==========================", devices);
+        discoverDevices(devices);
     });
 }
 
-function discoverDevices() {
-    client.searchForDevice(10000, "Smart Utilities", function (err, response) {
+function discoverDevices(devices) {
+    /* client.searchForDevice(10000, "Smart Utilities", function (err, response) {
 
       console.log ("Callback reponse: ", response);
+
+      console.log ("================ Discover Devices: ==========================", devices);
+
 
       // Connect to the first device
       var serviceMessage = response;
 
       connectToDevice(serviceMessage);
 
-    });
+    }); */
 
 
-    /* client.deviceDiscovery(10000, function (err, response) {
+    client.deviceDiscovery(10000, function (err, response) {
 
         console.log("deviceDiscovery.callback.err: %s", err);
         console.log("deviceDiscovery.callback.response: %j", response);
+
+        console.log ("================ Discover Devices: ==========================", devices);
 
         if (response != null && response.length > 0) {
 
@@ -166,7 +184,7 @@ function discoverDevices() {
             console.log("Did not discover any devices on the network.");
         }
 
-    }); */
+    });
 }
 
 function connectToDevice(serviceMessage) {
