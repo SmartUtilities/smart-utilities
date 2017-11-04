@@ -13,19 +13,88 @@ var host = config.get('host');
 var port = config.get('port');
 var logFileName = config.get('logFileName');
 
-wpwithin.createClient(host, port, true, logFileName, function (err, response) {
 
-    console.log("createClient.callback");
-    console.log("createClient.callback.err: " + err);
-    console.log("createClient.callback.response: %j", response);
+// server.js
 
-    if (err == null) {
+// BASE SETUP
+// =============================================================================
 
-        client = response;
+// call the packages we need
+var express    = require('express');        // call express
+var app        = express();                 // define our app using express
+var bodyParser = require('body-parser');
+var path = require('path');
+path.resolve('public');
 
-        setup();
-    }
+// app.use(express.static(__dirname + '/public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// configure app to use bodyParser()
+// this will let us get the data from a POST
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+// this will serve static files
+/* var options = {
+  dotfiles: 'ignore',
+  etag: false,
+  extensions: ['htm', 'html'],
+  index: false,
+  maxAge: '1d',
+  redirect: false,
+  setHeaders: function (res, path, stat) {
+    res.set('x-timestamp', Date.now())
+  }
+} */
+
+
+var port = 3000;        // set our port
+
+// ROUTES FOR OUR API
+// =============================================================================
+var router = express.Router();              // get an instance of the express Router
+
+// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
+router.get('/search', function(req, res) {
+    res.json({ message: 'hooray! welcome to our api!' });
+    wpwithin.createClient(host, port, true, logFileName, function (err, response) {
+
+        console.log("createClient.callback");
+        console.log("createClient.callback.err: " + err);
+        console.log("createClient.callback.response: %j", response);
+
+        if (err == null) {
+
+            client = response;
+
+            setup();
+        }
+    });
 });
+
+router.post ('/search', function (req, res) {
+  res.json({ message: 'hooray! welcome to our api!' }); 
+
+});
+
+// more routes for our API will happen here
+
+// REGISTER OUR ROUTES -------------------------------
+// all of our routes will be prefixed with /api
+//app.use('/platform', router);
+
+app.use('/api', router);
+
+// START THE SERVER
+// =============================================================================
+app.listen(port);
+console.log('Magic happens on port ' + port);
+
+
+
+// Methods
+// =============================================================================
+
 
 function setup() {
 
