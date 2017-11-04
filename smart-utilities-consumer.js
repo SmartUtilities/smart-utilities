@@ -1,5 +1,5 @@
 process.env.NODE_CONFIG_DIR= __dirname +'/config';
-process.env.NODE_ENV = 'example-consumer';
+process.env.NODE_ENV = 'smart-utilities-consumer';
 var config = require('config');
 
 var wpwithin = require('./library/wpwithin');
