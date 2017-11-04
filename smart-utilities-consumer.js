@@ -59,6 +59,7 @@ router.get('/search', function(req, res) {
     res.json({ message: 'hooray! welcome to our api!' });
 });
 
+
 router.route('/search').post(function(req, res) {
   //
 
