@@ -13,6 +13,12 @@ var host = config.get('host');
 var port = config.get('port');
 var logFileName = config.get('logFileName');
 
+// GLOBALS
+// =============================================================================
+
+var transactionID = 0;
+var producer = "";
+
 
 // DATABASE
 // =============================================================================
@@ -25,9 +31,9 @@ var connection = mysql.createConnection({
   database : 'smart_utilities'
 });
 
-/* connection.connect();
+connection.connect();
 
-connection.query('SELECT 1 + 1 AS solution', function (error, results, fields) {
+/* connection.query('SELECT 1 + 1 AS solution', function (error, results, fields) {
   if (error) throw error;
   console.log('The solution is: ', results[0].solution);
 });
@@ -70,7 +76,9 @@ router.route('/search').post(function(req, res) {
   var devices = req.body.devices;
   if (req.body.devices.length != 0) {
 
-    var transactionID = Math.floor(Date.now() / 1000);
+    transactionID = Math.floor(Date.now() / 1000);
+
+    setTimeout(buyEnergy, 30000, transactionID);
 
     var query = "INSERT INTO CONSUMERS (tid, consumer, duration) VALUES ";
     for (var i=0; i < req.body.devices.length; i++) {
@@ -80,7 +88,6 @@ router.route('/search').post(function(req, res) {
 
     console.log (query);
 
-    connection.connect();
 
     connection.query(query, function (error, results, fields) {
       if (error) throw error;
@@ -102,7 +109,7 @@ router.route('/search').post(function(req, res) {
       });
     });
 
-    connection.end();
+    // connection.end();
   }
   res.json({"message" : "OK"});
 });
@@ -179,12 +186,13 @@ function discoverDevices() {
             for (var i = 0; i < response.length; i++) {
 
 
-                // console.log (response[i].serviceTypes[0]);
+                console.log (response[i].serviceTypes[0]);
 
                 if (response[i].serviceTypes.join(', ').indexOf("smart-utilities-energy") >= 0) {
                   /* console.log (response[i].serviceTypes.join(', '));
                   console.log (response[i].serviceTypes.join(', ').indexOf("smart-utilities-energy")); */
                   console.log ("============================= SMART UTILITIES ENERGY ==============================");
+                  producer = response[i];
                   connectToDevice(response[i]);
                 }
                 /* console.log("Description: %s", response[i].deviceDescription);
@@ -282,21 +290,57 @@ function getServicePrices(serviceId) {
         console.log("requestServicePrices.callback.err: %s", err);
         console.log("requestServicePrices.callback.response: %j", response);
 
+        console.log ("Transaction ID: ", transactionID);
+        console.log ("Producer: ", producer);
+        var query = "INSERT INTO PROVIDERS (`tid`, `provider`, `service`, `service_start`, `service_end`, `price`, `scheme`, `hostname`, `port`, `url_prefix`) VALUES "
         if (err == null && response != null && response.length > 0) {
+            // for (var i=0; i < response.length; i++) {
+            for (var i=0; i < response.length; i++) {
+                var price = response[i];
 
-            var price = response[0];
+                console.log("Price details for ServiceId: %d", serviceId);
+                console.log("Id: %d", price.id);
+                console.log("Description: %s", price.description);
+                console.log("UnitId: %d", price.unitId);
+                console.log("unitDescription: %s", price.unitDescription);
+                console.log("PricePerUnit:");
+                console.log("\tAmount: %d", price.pricePerUnit.amount);
+                console.log("\tCurrency Code: %s", price.pricePerUnit.currencyCode);
+                console.log("----------");
 
-            console.log("Price details for ServiceId: %d", serviceId);
-            console.log("Id: %d", price.id);
-            console.log("Description: %s", price.description);
-            console.log("UnitId: %d", price.unitId);
-            console.log("unitDescription: %s", price.unitDescription);
-            console.log("PricePerUnit:");
-            console.log("\tAmount: %d", price.pricePerUnit.amount);
-            console.log("\tCurrency Code: %s", price.pricePerUnit.currencyCode);
-            console.log("----------");
 
-            getServicePriceQuote(serviceId, 10, price.id);
+                // Insert into DB
+
+                query += "(";
+                query += transactionID + ", ";
+                query += "'" + producer.deviceName + "'" + ", ";
+                query += "'" + producer.serviceTypes[0] + "'"  + ", ";
+                query += price.id + ", ";
+                query += (price.id + 1) + ", ";
+                query += price.pricePerUnit.amount + ", ";
+                query += "'" + producer.scheme + "'" + ", ";
+                query += "'" + producer.hostname + "'" + ", ";
+                query += "'" + producer.portNumber  + "'" + ", ";
+                query += "'" + producer.urlPrefix + "'";
+                // query += price.id + ", ";
+
+                query += ")";
+                query += (i < response.length - 1) ? ", " : "";
+
+
+
+                // connection.connect();
+
+                //connection.end();
+            }
+
+            // console.log ("Query: ", query);
+
+            connection.query(query, function (error, results, fields) {
+              if (error) throw error;
+              // console.log('The solution is: ', results[0].solution);
+            });
+            // getServicePriceQuote(serviceId, 10, price.id);
         } else {
 
             console.log("Did not receive any service prices :/");
@@ -387,4 +431,94 @@ function endServiceDelivery(serviceId, serviceDeliveryToken, unitsReceived) {
         console.log("endServiceDelivery.callback.response: %j", response);
         process.exit(0);
     });
+}
+
+// Buy Energy
+// =============================================================================
+
+function buyEnergy (transactionID) {
+  console.log ("********************************* BUY ENERGY *******************************************");
+
+  var query = "SELECT sum(duration) as numberOfHours from consumers where tid = " + transactionID;
+
+  connection.query(query, function (error, results, fields) {
+    if (error) throw error;
+    console.log('Results Consumers: ', results);
+
+    var numberOfHours = results[0].numberOfHours;
+
+    //query = "SELECT provider, service, service_start, service_end, price, scheme, hostname, port, url_prefix from providers where tid = " + transactionID;
+
+    query = "select * from providers where tid = " + transactionID + " order by price limit " + numberOfHours;
+
+    connection.query(query, function (error, results, fields) {
+      if (error) throw error;
+
+      console.log('Results Providers: ', results);
+
+      for (var i=0; i < results.length; i++) {
+          // console.log (results[i].provider);
+          // console.log (producer);
+          // var serviceMessage = {};
+
+          producer.hostname = results[i].hostname;
+          producer.portNumber = results[i].port;
+          // producer.serviceId = ""
+          producer.urlPrefix = "";
+          producer.scheme = results[i].scheme;
+          producer.deviceName = results[i].provider;
+          producer.serviceTypes[0] = results[i].service;
+
+          buyFromDevice(producer, results[i].service_start);
+
+      }
+
+
+    });
+
+  });
+}
+
+function buyFromDevice(serviceMessage, priceId) {
+
+    console.log ("================ Buy From Devices ==========================", serviceMessage);
+
+    'use strict';
+
+    var hceCard = new types.HCECard();
+    hceCard.firstName = config.get('hceCard.firstName');
+    hceCard.lastName =  config.get('hceCard.lastName');
+    hceCard.expMonth = config.get('hceCard.expMonth');
+    hceCard.expYear = config.get('hceCard.expYear');
+    hceCard.cardNumber = config.get('hceCard.cardNumber');
+    hceCard.type = config.get('hceCard.type');
+    hceCard.cvc = config.get('hceCard.cvc');
+
+    var pspConfig = new Array();
+    pspConfig[wpwConstants.PSP_NAME] = config.get('pspConfig.psp_name');
+    pspConfig[wpwConstants.API_ENDPOINT] = config.get('pspConfig.api_endpoint');
+
+    if (pspConfig[wpwConstants.PSP_NAME] === "securenet") {
+        // additional parameters for securenet
+        pspConfig[wpwConstants.APP_VERSION] = config.get('pspConfig.app_version');
+        pspConfig[wpwConstants.DEVELOPER_ID] = config.get('pspConfig.developer_id');
+
+    }
+
+    client.initConsumer(serviceMessage.scheme, serviceMessage.hostname, serviceMessage.portNumber,
+        serviceMessage.urlPrefix, device.uid, hceCard, pspConfig, function (err, response) {
+
+            console.log("initConsumer.callback.err: %s", err);
+            console.log("initConsumer.callback.response: %j", response);
+
+            if (err == null) {
+
+                console.log("Did initialise consumer.");
+
+                // getAvailableServices();
+                var serviceId = 1;
+                var numberOfUnits = 1;
+                getServicePriceQuote(serviceId, numberOfUnits, priceId);
+            }
+        });
 }
