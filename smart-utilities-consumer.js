@@ -271,8 +271,8 @@ function getAvailableServices() {
         console.log("requestServices.callback.response: %j", response);
 
         if (err == null && response != null && response.length > 0) {
-
-            var svc = response[0];
+          for(var i=0;i < response.length; i++){
+            var svc = response[i];
 
             console.log("Services:");
             console.log("Id: %s", svc.serviceId);
@@ -280,6 +280,7 @@ function getAvailableServices() {
             console.log("----------");
 
             getServicePrices(svc.serviceId);
+          }
         }
     });
 }

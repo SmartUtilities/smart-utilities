@@ -28,7 +28,7 @@ wpwithin.createClient(host, port, true, logFileName, function (err, response) {
 
 function setup() {
 
-    client.setup("Smart Utilities 2", "Smart Utilities Producer Device", function (err, response) {
+    client.setup("Smart Utilities 2", "Smart Utilities Producer Device 2", function (err, response) {
 
         console.log("setup.callback.err: " + err);
         console.log("setup.callback.response: %j", response);
