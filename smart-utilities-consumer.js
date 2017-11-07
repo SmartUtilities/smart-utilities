@@ -25,7 +25,7 @@ var producer = "";
 
 var mysql      = require('mysql');
 var connection = mysql.createConnection({
-  host     : '10.0.0.160',
+  host     : '192.168.169.60',
   user     : 'root',
   password : 'w0rldp4y!',
   database : 'smart_utilities'
@@ -221,7 +221,7 @@ function discoverDevices() {
 
 function connectToDevice(serviceMessage) {
 
-    //console.log ("================ Connect to Devices: ==========================", devices);
+    console.log ("================ Connect to Devices: ==========================", serviceMessage);
 
     'use strict';
 
@@ -271,10 +271,12 @@ function getAvailableServices() {
         console.log("requestServices.callback.response: %j", response);
 
         if (err == null && response != null && response.length > 0) {
+
+          console.log ("GET AVAILABLE SERVICES: ", response);
           for(var i=0;i < response.length; i++){
             var svc = response[i];
 
-            console.log("Services:");
+            console.log("Services:", svc);
             console.log("Id: %s", svc.serviceId);
             console.log("Description: %s", svc.serviceDescription);
             console.log("----------");
@@ -286,7 +288,7 @@ function getAvailableServices() {
 }
 
 function getServicePrices(serviceId) {
-
+    console.log ("======================================= Client =================================", client);
     client.getServicePrices(serviceId, function (err, response) {
 
         console.log("requestServicePrices.callback.err: %s", err);
